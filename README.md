@@ -11,17 +11,6 @@ A Python-based implementation of autonomous agents that communicate through asyn
 - Event-driven architecture
 - Extensible base agent class
 
-## Project Structure
-```
-autonomous_agents/
-├── src/
-│   ├── base_agent.py      # Base agent implementation
-│   └── concrete_agent.py  # Concrete agent implementation
-├── tests/
-│   └── test_agents.py     # Test suite
-├── main.py               # Main execution script
-└── README.md            # This file
-```
 
 ## Components
 
