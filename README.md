@@ -1,221 +1,132 @@
-# Autonomous Agent System
+```markdown
+# Autonomous Agent Implementation
 
-## Overview
-A Python-based implementation of autonomous agents that communicate through asynchronous messages. Each agent can process incoming messages, generate outgoing messages, and execute behaviors based on timing or internal state.
+This project implements an autonomous agent system that demonstrates asynchronous messaging, reactive handling, and proactive behaviors.
+
+## Project Structure
+
+```
+project/
+├── agent.py        # Main agent implementation
+├── test_agent.py   # Unit and integration tests
+└── README.md       # This file
+```
 
 ## Features
-- Asynchronous message processing
-- Configurable message handlers
-- Time-based behaviors
-- Agent-to-agent communication
-- Event-driven architecture
-- Extensible base agent class
 
+- Asynchronous message handling using queues
+- Reactive message handlers with registration system
+- Proactive behaviors with registration system
+- Multi-threaded operation
+- Two-way agent communication
 
-## Components
+## Self-Assessment of Required Technologies
 
-### 1. Base Agent (base_agent.py)
-The foundation class providing core agent functionality:
-- Message handling system
-- Behavior registration
-- Asynchronous processing
-- Internal state management
+### Python
+[4]
 
+### Docker
+[4]
+
+### Kubernetes
+[4]
+
+### Tendermint
+[4]
+
+### Git/GitHub
+[4]
+
+## Implementation Details
+
+### Agent Characteristics
+- Uses Python's standard `queue.Queue` for asynchronous message handling
+- Implements both reactive (handlers) and proactive (behaviors) components
+- Runs handlers and behaviors in separate threads
+
+### Key Components
+1. Message Handling:
 ```python
-class BaseAgent:
-    def register_handler(self, message_type: str, handler: Callable)
-    def register_behavior(self, behavior_name: str, behavior: Callable)
-    async def process_messages()
-    async def execute_behaviors()
+agent.register_handler('message_type', handler_function)
 ```
 
-### 2. Concrete Agent (concrete_agent.py)
-Implementation of a specific agent type that:
-- Filters messages containing "hello"
-- Generates random two-word messages
-- Uses a predefined vocabulary
+2. Behavior Registration:
 ```python
-class ConcreteAgent(BaseAgent):
-    # Vocabulary
-    word_list = ["hello", "sun", "world", "space", "moon",
-                 "crypto", "sky", "ocean", "universe", "human"]
+agent.register_behavior('behavior_name', behavior_function)
 ```
 
-## Installation
+3. Message Generation:
+- Generates random two-word messages every 2 seconds
+- Uses predefined vocabulary: ["hello", "sun", "world", "space", "moon", "crypto", "sky", "ocean", "universe", "human"]
 
-1. Ensure Python 3.7+ is installed:
+## Running the Project
+
+1. Run the agents:
 ```bash
-python --version
+python agent.py
 ```
 
-2. Clone the repository:
+2. Run the tests:
 ```bash
-git clone <repository-url>
-cd autonomous-agents
+python -m unittest test_agent.py
 ```
 
-3. Install dependencies:
-```bash
-pip install pytest pytest-asyncio
-```
+## Design Choices
 
-## Usage
+1. Simple Queue-based Communication
+- Used Python's built-in `queue.Queue` for thread-safe message passing
+- Simple and effective for demonstrating agent communication
 
-### Running the System
+2. Function-based Handlers and Behaviors
+- Handlers and behaviors are simple functions
+- Can be called independently when needed
+- Easy to test and modify
 
-1. Start the agent system:
-```bash
-python main.py
-```
-
-2. The system will:
-- Create two agents
-- Connect their message channels
-- Begin message exchange
-- Process messages containing "hello"
-
-### Example Output
-```
-Initializing agents...
-Starting agents... Press Ctrl+C to stop
-
-Agent1 sent: {'type': 'default', 'content': 'hello world', 'from': 'Agent1'}
-Agent2 received: {'type': 'default', 'content': 'hello world', 'from': 'Agent1'}
-...
-```
-
-## Development
-
-### Creating a New Agent Type
-
-1. Inherit from BaseAgent:
-```python
-from base_agent import BaseAgent
-
-class MyAgent(BaseAgent):
-    def __init__(self, name: str):
-        super().__init__(name)
-```
-
-2. Register handlers and behaviors:
-```python
-# Register message handler
-self.register_handler('my_type', self.my_handler)
-
-# Register behavior
-self.register_behavior(
-    'my_behavior',
-    self.my_behavior,
-    interval=1.0
-)
-```
-
-3. Implement handlers and behaviors:
-```python
-async def my_handler(self, message: dict):
-    # Handle message
-
-async def my_behavior(self, state: dict):
-    # Execute behavior
-```
+3. Threading Implementation
+- Separate threads for handlers and behaviors
+- Clear separation of concerns
+- Proper resource cleanup
 
 ## Testing
 
-### Running Tests
+The project includes both unit tests and integration tests:
 
-1. Run all tests:
-```bash
-python -m pytest tests/test_agents.py -v
-```
+- Unit Tests:
+  - Handler registration
+  - Behavior registration
+  - Message handling
+  - Message generation
 
-2. Run specific test:
-```bash
-python -m pytest tests/test_agents.py -v -k "test_name"
-```
+- Integration Tests:
+  - Two-agent communication
+  - Message exchange verification
 
-### Test Coverage
-- Message handler registration
-- Behavior registration
-- Random message generation
-- Hello message filtering
-- Behavior timing
-- Agent interaction
-- Word distribution
-- Error handling
+## Future Improvements
 
-## Architecture
+1. Add logging system
+2. Implement more sophisticated message routing
+3. Add message validation
+4. Enhance error handling
+5. Add configuration management
 
-### Message Flow
-```
-Agent1                     Agent2
-  │                         │
-  ├─── Generate Message ───►│
-  │                        ├─► Process Message
-  │                        │
-  │◄── Generate Message ───┤
-  ├─► Process Message      │
-  │                         │
-```
+## Notes
 
-### Behavior Execution
-1. Time-based:
-   - Execute at specified intervals
-   - Regular message generation
-
-2. State-based:
-   - React to internal state changes
-   - Conditional execution
-
-## Configuration
-
-### Agent Settings
-```python
-# Behavior intervals
-interval=2.0  # seconds
-
-# Message types
-message_type='default'
-
-# Handler registration
-agent.register_handler(message_type, handler)
-```
-
-## Error Handling
-
-1. Message Processing Errors:
-```python
-try:
-    await handler(message)
-except Exception as e:
-    logger.error(f"Error processing message: {e}")
-```
-
-2. Behavior Execution Errors:
-```python
-try:
-    await behavior(state)
-except Exception as e:
-    logger.error(f"Error in behavior: {e}")
-```
+- Uses only Python standard library
+- Follows basic code structure
+- Implements all required functionalities
+- Includes comprehensive tests
+- Easy to extend and modify
 
 ## Contributing
 
+To contribute:
 1. Fork the repository
-2. Create a feature branch
-3. Implement changes
-4. Add tests
-5. Submit pull request
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-## Future Enhancements
+## License
 
-1. Planned Features:
-   - Additional message types
-   - More complex behaviors
-   - Enhanced state management
-   - Web interface
-
-2. Potential Improvements:
-   - Performance optimization
-   - Extended test coverage
-   - Additional agent types
-   - Documentation expansion
+[Add your license information here]
+```
