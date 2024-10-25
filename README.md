@@ -1,4 +1,22 @@
 ```markdown
+# Tenderly fork RPC URL
+WEB3_PROVIDER_URI=https://sepolia.infura.io/v3/648953bbe9304cdc946e47d66a8265b8
+
+# Contract and wallet details
+TOKEN_ADDRESS=0xa42C8BDA1A7aFCe24894995bbB8F592B2129CdCe  # e.g., USDC on Ethereum
+SOURCE_WALLET_ADDRESS=0x5a61cA6A420D6E54C5D9A6b77A461884840A7cF2
+SOURCE_WALLET_PRIVATE_KEY=
+
+# Network (sepolia or goerli)
+NETWORK=sepolia
+
+
+
+# Token (USDC)
+TOKEN_NAME=Humanity Coin
+
+
+
 # Autonomous Agent Implementation
 
 This project implements an autonomous agent system that demonstrates asynchronous messaging, reactive handling, and proactive behaviors.
@@ -66,10 +84,7 @@ agent.register_behavior('behavior_name', behavior_function)
 python agent.py
 ```
 
-2. Run the tests:
-```bash
-python -m unittest test_agent.py
-```
+
 
 ## Design Choices
 
