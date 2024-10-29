@@ -5,25 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c7d5ee75-6d39-411c-b3d7-44bc19673b4d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pytest.ini" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/agent.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/behaviors.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/handlers.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/web3_client.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_agent.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_behaviors.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_handlers.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_integration.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_web3_client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/Agent.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Agent.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Agent.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,6 +27,7 @@
   "keyToString": {
     "Python tests.Python tests in agent.py.executor": "Run",
     "Python tests.Python tests in test_agent.py.executor": "Run",
+    "Python tests.Python tests in test_behaviors.py.executor": "Run",
     "Python tests.Python tests in test_connection.py.executor": "Run",
     "Python tests.Python tests in test_setup.py.executor": "Run",
     "Python.Agent.executor": "Run",
