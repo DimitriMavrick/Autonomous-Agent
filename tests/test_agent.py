@@ -160,12 +160,23 @@ async def test_agent_lifecycle():
     """Test agent start/stop lifecycle"""
     agent = Agent("TestAgent")
 
-    # Test async context manager
-    async with agent as a:
-        assert a.is_running
-        await asyncio.sleep(0.1)
+    # Start the agent
+    agent_task = asyncio.create_task(agent.run())
+    await asyncio.sleep(0.1)  # Give agent time to start
+    assert agent.is_running
 
+    # Stop the agent
+    await agent.stop()
+    await agent_task  # Wait for agent task to complete
     assert not agent.is_running
+
+    # Test async context manager separately
+    async with Agent("ContextAgent") as context_agent:
+        assert context_agent.is_running
+        await asyncio.sleep(0.1)  # Allow some time for agent to run
+
+    # Verify agent stopped after context exit
+    assert not context_agent.is_running
 
 @pytest.mark.asyncio
 async def test_agent_connection():

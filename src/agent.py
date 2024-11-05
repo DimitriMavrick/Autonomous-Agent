@@ -174,11 +174,16 @@ class Agent:
 
     async def __aenter__(self):
         """Async context manager entry."""
+        # Start the agent when entering context
+        self.run_task = asyncio.create_task(self.run())
+        await asyncio.sleep(0.1)  # Give agent time to start
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
         await self.stop()
+        if hasattr(self, 'run_task'):
+            await self.run_task  # Wait for run task to complete
 
     def register_handler(self, handler: Handler) -> None:
         """

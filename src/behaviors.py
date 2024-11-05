@@ -4,8 +4,8 @@ import random
 from datetime import datetime
 from typing import List, Optional
 import logging
-from web3 import Web3
 from agent import Behavior, Message
+from utils.web3_utils import Web3Helper
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -16,7 +16,6 @@ WORD_LIST = [
     "hello", "sun", "world", "space", "moon",
     "crypto", "sky", "ocean", "universe", "human"
 ]
-
 
 class RandomMessageBehavior(Behavior):
     """
@@ -33,7 +32,7 @@ class RandomMessageBehavior(Behavior):
         super().__init__(interval=2.0)  # 2 seconds interval
         self.word_list = word_list
         logger.info("RandomMessageBehavior initialized with "
-                    f"{len(word_list)} words")
+                   f"{len(word_list)} words")
 
     async def execute(self) -> Optional[Message]:
         """
@@ -76,34 +75,19 @@ class TokenBalanceBehavior(Behavior):
 
     def __init__(
             self,
-            web3_provider: str,
             contract_address: str,
-            wallet_address: str,
-            contract_abi: List[dict]
+            wallet_address: str
     ):
         """
-        Initialize behavior with Web3 and contract details.
+        Initialize behavior with contract and wallet details.
 
         Args:
-            web3_provider: Web3 provider URL (e.g., Tenderly fork URL)
             contract_address: ERC20 contract address
             wallet_address: Address to check balance for
-            contract_abi: ERC20 contract ABI
         """
         super().__init__(interval=10.0)  # 10 seconds interval
-
-        # Initialize Web3 connection
-        self.web3 = Web3(Web3.HTTPProvider(web3_provider))
-
-        # Store addresses
-        self.contract_address = contract_address
         self.wallet_address = wallet_address
-
-        # Initialize contract
-        self.contract = self.web3.eth.contract(
-            address=self.web3.to_checksum_address(contract_address),
-            abi=contract_abi
-        )
+        self.web3_helper = Web3Helper(contract_address)
 
         logger.info(
             f"TokenBalanceBehavior initialized for wallet "
@@ -118,27 +102,19 @@ class TokenBalanceBehavior(Behavior):
             Message: Contains current token balance
         """
         try:
-            # Get token balance
-            balance = self.contract.functions.balanceOf(
-                self.web3.to_checksum_address(self.wallet_address)
-            ).call()
-
-            # Get token decimals
-            decimals = self.contract.functions.decimals().call()
-
-            # Convert balance to human-readable format
-            human_balance = balance / (10 ** decimals)
+            # Get human-readable balance
+            balance = await self.web3_helper.get_balance(self.wallet_address)
+            if balance is None:
+                return None
 
             # Create message
             message = Message(
                 type="token_balance",
-                content=f"Current balance: {human_balance}",
+                content=f"Current balance: {balance}",
                 metadata={
-                    "raw_balance": str(balance),
-                    "decimals": decimals,
-                    "human_balance": human_balance,
+                    "human_balance": balance,
                     "wallet_address": self.wallet_address,
-                    "contract_address": self.contract_address,
+                    "contract_address": self.web3_helper.contract_address,
                     "checked_at": datetime.now().isoformat()
                 }
             )
@@ -146,73 +122,10 @@ class TokenBalanceBehavior(Behavior):
             logger.info(
                 f"Token balance checked for "
                 f"{self.wallet_address[:6]}...{self.wallet_address[-4:]}: "
-                f"{human_balance}"
+                f"{balance}"
             )
             return message
 
         except Exception as e:
             logger.error(f"Error checking token balance: {e}")
             return None
-
-    async def get_balance(self) -> Optional[float]:
-        """
-        Helper method to get current balance.
-
-        Returns:
-            float: Current token balance in human-readable format
-        """
-        try:
-            balance = self.contract.functions.balanceOf(
-                self.web3.to_checksum_address(self.wallet_address)
-            ).call()
-            decimals = self.contract.functions.decimals().call()
-            return balance / (10 ** decimals)
-        except Exception as e:
-            logger.error(f"Error getting token balance: {e}")
-            return None
-
-
-# Example minimal ERC20 ABI (only needed functions)
-ERC20_ABI = [
-    {
-        "constant": True,
-        "inputs": [{"name": "_owner", "type": "address"}],
-        "name": "balanceOf",
-        "outputs": [{"name": "balance", "type": "uint256"}],
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "decimals",
-        "outputs": [{"name": "", "type": "uint8"}],
-        "type": "function"
-    }
-]
-
-if __name__ == "__main__":
-    # Example usage
-    import asyncio
-    import os
-    from dotenv import load_dotenv
-
-
-    async def example():
-        # Random message behavior example
-        random_behavior = RandomMessageBehavior()
-        message = await random_behavior.execute()
-        print(f"Random message: {message}")
-
-        # Token balance behavior example
-        load_dotenv()
-        balance_behavior = TokenBalanceBehavior(
-            web3_provider=os.getenv("TENDERLY_FORK_RPC_URL"),
-            contract_address=os.getenv("ERC20_CONTRACT_ADDRESS"),
-            wallet_address=os.getenv("SOURCE_WALLET_ADDRESS"),
-            contract_abi=ERC20_ABI
-        )
-        balance_message = await balance_behavior.execute()
-        print(f"Balance message: {balance_message}")
-
-
-    asyncio.run(example())
