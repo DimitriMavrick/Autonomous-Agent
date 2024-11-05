@@ -1,15 +1,8 @@
-# Environment variables
-.env
-.env.*
-!.env.example
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -22,21 +15,70 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Virtual Environment
-venv/
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment directories
+.env
 .venv
+env/
+venv/
 ENV/
+env.bak/
+venv.bak/
 
-# IDE
+# IDE - PyCharm
 .idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+
+# IDE - VS Code
 .vscode/
+*.code-workspace
+.history
+
+# IDE - Others
 *.swp
 *.swo
+*~
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Project specific
 *.log
+.env
+.env.*
+!.env.example
