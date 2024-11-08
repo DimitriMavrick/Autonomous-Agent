@@ -12,12 +12,14 @@ A Python-based autonomous agent system that demonstrates asynchronous communicat
 ## Quick Start
 
 1. **Clone the Repository**
+
 ```bash
 git clone https://github.com/DimitriMavrick/Autonomous-Agent
 cd Autonomous_Agent
 ```
 
 2. **Set Up Virtual Environment**
+
 ```bash
 python -m venv venv
 # On Windows:
@@ -27,11 +29,13 @@ source venv/bin/activate
 ```
 
 3. **Install Dependencies**
+
 ```bash
 pip install -r requirements.txt
 ```
 
 4. **Configure Environment**
+
 ```bash
 # Copy example environment file
 cp .env.example .env
@@ -44,11 +48,13 @@ cp .env.example .env
 ```
 
 5. **Run the System**
+
 ```bash
 python src/main.py
 ```
 
 ## Project Structure
+
 ```
 ├── src/
 │   ├── __init__.py
@@ -87,6 +93,7 @@ ALCHEMY_RPC_URL=            # Your Alchemy endpoint
 ## Testing
 
 Run the test suite:
+
 ```bash
 # Run all tests
 pytest tests/test_agent.py
@@ -109,11 +116,13 @@ pytest --cov=src tests/test_agent.py
 ## Development
 
 1. **Code Style**
+
    - Follow PEP 8 guidelines
    - Use type hints
    - Include docstrings
 
 2. **Testing**
+
    - Write tests for new features
    - Ensure all tests pass before committing
    - Maintain test coverage
@@ -126,11 +135,13 @@ pytest --cov=src tests/test_agent.py
 ## Troubleshooting
 
 1. **Connection Issues**
+
    - Verify RPC URLs in .env
    - Check network connectivity
    - Ensure Tenderly fork is active
 
 2. **Transaction Failures**
+
    - Check wallet balances
    - Verify contract addresses
    - Ensure proper network setup

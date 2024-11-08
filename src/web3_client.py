@@ -160,4 +160,3 @@ class Web3Client:
             logger.error(f"Error transferring tokens: {e}")
             return None
 
-    # ... other methods remain the same ...
