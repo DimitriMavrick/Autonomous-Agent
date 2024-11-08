@@ -6,6 +6,7 @@ from typing import List, Optional
 import logging
 from agent import Behavior, Message
 from utils.web3_utils import Web3Helper
+import asyncio
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -20,6 +21,7 @@ WORD_LIST = [
 class RandomMessageBehavior(Behavior):
     """
     Generates random two-word messages every 2 seconds from predefined word list.
+    Non-blocking implementation.
     """
 
     def __init__(self, word_list: List[str] = WORD_LIST):
@@ -36,7 +38,7 @@ class RandomMessageBehavior(Behavior):
 
     async def execute(self) -> Optional[Message]:
         """
-        Generate random two-word message.
+        Generate random two-word message asynchronously.
 
         Returns:
             Message: Contains randomly generated two-word string
@@ -71,6 +73,7 @@ class RandomMessageBehavior(Behavior):
 class TokenBalanceBehavior(Behavior):
     """
     Checks ERC20 token balance every 10 seconds and generates balance message.
+    Non-blocking implementation.
     """
 
     def __init__(
@@ -88,6 +91,8 @@ class TokenBalanceBehavior(Behavior):
         super().__init__(interval=10.0)  # 10 seconds interval
         self.wallet_address = wallet_address
         self.web3_helper = Web3Helper(contract_address)
+        # Track ongoing operations
+        self._checking_balance = False
 
         logger.info(
             f"TokenBalanceBehavior initialized for wallet "
@@ -96,14 +101,32 @@ class TokenBalanceBehavior(Behavior):
 
     async def execute(self) -> Optional[Message]:
         """
-        Check token balance and generate balance message.
+        Check token balance and generate balance message asynchronously.
+        Uses non-blocking approach to prevent holding up other behaviors.
 
         Returns:
             Message: Contains current token balance
         """
+        # Skip if already checking balance
+        if self._checking_balance:
+            logger.debug("Balance check already in progress, skipping")
+            return None
+
         try:
-            # Get human-readable balance
-            balance = await self.web3_helper.get_balance(self.wallet_address)
+            self._checking_balance = True
+            
+            # Create task for balance check
+            balance_task = asyncio.create_task(
+                self.web3_helper.get_balance(self.wallet_address)
+            )
+            
+            # Wait for balance with timeout
+            try:
+                balance = await asyncio.wait_for(balance_task, timeout=5.0)
+            except asyncio.TimeoutError:
+                logger.warning("Balance check timed out")
+                return None
+
             if balance is None:
                 return None
 
@@ -129,3 +152,6 @@ class TokenBalanceBehavior(Behavior):
         except Exception as e:
             logger.error(f"Error checking token balance: {e}")
             return None
+
+        finally:
+            self._checking_balance = False

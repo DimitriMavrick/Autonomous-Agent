@@ -66,12 +66,6 @@ class Web3Helper:
             try:
                 web3 = Web3(Web3.HTTPProvider(provider_url))
                 if web3.is_connected():
-                    # Verify network
-                    chain_id = web3.eth.chain_id
-                    if chain_id != 11155111:  # Sepolia chain ID
-                        logger.warning(f"Wrong network on {provider_url}: {chain_id}")
-                        continue
-
                     self.web3 = web3
                     self.contract = self.web3.eth.contract(
                         address=self.web3.to_checksum_address(self.contract_address),
