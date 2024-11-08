@@ -56,7 +56,8 @@ class RandomMessageBehavior(Behavior):
                 metadata={
                     "word1": word1,
                     "word2": word2,
-                    "generated_at": datetime.now().isoformat()
+                    "generated_at": datetime.now().isoformat(),
+                    "task_id": id(self.task) if self.task else None  # Add task tracking
                 }
             )
 
@@ -88,6 +89,7 @@ class TokenBalanceBehavior(Behavior):
         super().__init__(interval=10.0)  # 10 seconds interval
         self.wallet_address = wallet_address
         self.web3_helper = Web3Helper(contract_address)
+        self._last_balance = None  # Track last balance for change detection
 
         logger.info(
             f"TokenBalanceBehavior initialized for wallet "
@@ -107,25 +109,33 @@ class TokenBalanceBehavior(Behavior):
             if balance is None:
                 return None
 
-            # Create message
-            message = Message(
-                type="token_balance",
-                content=f"Current balance: {balance}",
-                metadata={
-                    "human_balance": balance,
-                    "wallet_address": self.wallet_address,
-                    "contract_address": self.web3_helper.contract_address,
-                    "checked_at": datetime.now().isoformat()
-                }
-            )
+            # Only create message if balance changed or this is first check
+            if balance != self._last_balance:
+                self._last_balance = balance
+                
+                # Create message
+                message = Message(
+                    type="token_balance",
+                    content=f"Current balance: {balance}",
+                    metadata={
+                        "human_balance": balance,
+                        "wallet_address": self.wallet_address,
+                        "contract_address": self.web3_helper.contract_address,
+                        "checked_at": datetime.now().isoformat(),
+                        "task_id": id(self.task) if self.task else None,  # Add task tracking
+                        "previous_balance": self._last_balance
+                    }
+                )
 
-            logger.info(
-                f"Token balance checked for "
-                f"{self.wallet_address[:6]}...{self.wallet_address[-4:]}: "
-                f"{balance}"
-            )
-            return message
+                logger.info(
+                    f"Token balance checked for "
+                    f"{self.wallet_address[:6]}...{self.wallet_address[-4:]}: "
+                    f"{balance}"
+                )
+                return message
+            
+            return None  # No message if balance hasn't changed
 
         except Exception as e:
             logger.error(f"Error checking token balance: {e}")
-            return None	
+            return None

@@ -31,21 +31,23 @@ async def connect_agents(agent1: Agent, agent2: Agent) -> None:
         agent1.connect_to(agent2)
         agent2.connect_to(agent1)
 
-        while True:
+        while agent1.is_running and agent2.is_running:  # Modified condition
             # Forward messages from agent1's outbox to agent2's inbox
             while not agent1.outbox.is_empty():
                 if message := await agent1.outbox.get():
                     await agent2.inbox.put(message)
-                    logger.info(f"Forwarded message from {agent1.name} to {agent2.name}: {message}")
+                    logger.debug(f"Forwarded message from {agent1.name} to {agent2.name}: {message}")
 
             # Forward messages from agent2's outbox to agent1's inbox
             while not agent2.outbox.is_empty():
                 if message := await agent2.outbox.get():
                     await agent1.inbox.put(message)
-                    logger.info(f"Forwarded message from {agent2.name} to {agent1.name}: {message}")
+                    logger.debug(f"Forwarded message from {agent2.name} to {agent1.name}: {message}")
 
             await asyncio.sleep(0.1)  # Prevent CPU overload
 
+    except asyncio.CancelledError:
+        logger.info("Agent connection task cancelled")
     except Exception as e:
         logger.error(f"Error in connect_agents: {e}")
         raise
@@ -62,35 +64,39 @@ async def setup_agents() -> Tuple[Agent, Agent]:
         # Load environment variables
         load_dotenv()
 
-        if not all([
-            os.getenv("ERC20_CONTRACT_ADDRESS"),
-            os.getenv("SOURCE_WALLET_ADDRESS"),
-            os.getenv("TARGET_WALLET_ADDRESS"),
-            os.getenv("SOURCE_WALLET_PRIVATE_KEY")
-        ]):
-            raise ValueError("Missing required environment variables")
+        required_env_vars = [
+            "ERC20_CONTRACT_ADDRESS",
+            "SOURCE_WALLET_ADDRESS",
+            "TARGET_WALLET_ADDRESS",
+            "SOURCE_WALLET_PRIVATE_KEY"
+        ]
+
+        missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
         # Create agents
         agent1 = Agent("Agent1")
         agent2 = Agent("Agent2")
 
-        # Create behaviors and handlers
-        random_behavior = RandomMessageBehavior()  # Uses default word list
-        token_balance_behavior = TokenBalanceBehavior(
-            contract_address=os.getenv("ERC20_CONTRACT_ADDRESS"),
-            wallet_address=os.getenv("SOURCE_WALLET_ADDRESS")
-        )
-
-        hello_handler = HelloHandler()
-        crypto_handler = CryptoTransferHandler(
-            contract_address=os.getenv("ERC20_CONTRACT_ADDRESS"),
-            source_address=os.getenv("SOURCE_WALLET_ADDRESS"),
-            target_address=os.getenv("TARGET_WALLET_ADDRESS"),
-            private_key=os.getenv("SOURCE_WALLET_PRIVATE_KEY")
-        )
-
-        # Register behaviors and handlers for both agents
+        # Create behaviors and handlers with separate instances for each agent
         for agent in [agent1, agent2]:
+            # Create separate behavior instances for each agent
+            random_behavior = RandomMessageBehavior()  # Uses default word list
+            token_balance_behavior = TokenBalanceBehavior(
+                contract_address=os.getenv("ERC20_CONTRACT_ADDRESS"),
+                wallet_address=os.getenv("SOURCE_WALLET_ADDRESS")
+            )
+
+            hello_handler = HelloHandler()
+            crypto_handler = CryptoTransferHandler(
+                contract_address=os.getenv("ERC20_CONTRACT_ADDRESS"),
+                source_address=os.getenv("SOURCE_WALLET_ADDRESS"),
+                target_address=os.getenv("TARGET_WALLET_ADDRESS"),
+                private_key=os.getenv("SOURCE_WALLET_PRIVATE_KEY")
+            )
+
+            # Register behaviors and handlers
             agent.register_behavior(random_behavior)
             agent.register_behavior(token_balance_behavior)
             agent.register_handler(hello_handler)
@@ -113,9 +119,15 @@ async def cleanup_agents(agent1: Agent, agent2: Agent) -> None:
         agent2: Second agent to clean up
     """
     try:
-        await agent1.stop()
-        await agent2.stop()
-        logger.info("Agents stopped successfully")
+        cleanup_tasks = []
+        for agent in [agent1, agent2]:
+            if agent and agent.is_running:
+                cleanup_tasks.append(asyncio.create_task(agent.stop()))
+
+        if cleanup_tasks:
+            await asyncio.gather(*cleanup_tasks)
+            logger.info("Agents stopped successfully")
+
     except Exception as e:
         logger.error(f"Error during cleanup: {e}")
         raise
@@ -128,6 +140,7 @@ async def main():
     """
     agent1 = None
     agent2 = None
+    tasks = []
 
     try:
         logger.info("Starting agent system...")
@@ -142,7 +155,7 @@ async def main():
             asyncio.create_task(connect_agents(agent1, agent2))
         ]
 
-        # Wait for all tasks to complete or KeyboardInterrupt
+        # Wait for all tasks to complete
         await asyncio.gather(*tasks)
 
     except KeyboardInterrupt:
@@ -150,6 +163,18 @@ async def main():
     except Exception as e:
         logger.error(f"Error in main: {e}")
     finally:
+        # Cancel all running tasks
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+
+        try:
+            # Wait for tasks to be cancelled
+            await asyncio.gather(*tasks, return_exceptions=True)
+        except asyncio.CancelledError:
+            pass
+
+        # Cleanup agents
         if agent1 or agent2:
             await cleanup_agents(agent1, agent2)
         logger.info("Agent system shutdown complete")
