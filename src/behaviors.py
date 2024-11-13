@@ -4,6 +4,7 @@ import random
 from datetime import datetime
 from typing import List, Optional
 import logging
+import asyncio
 from agent import Behavior, Message
 from utils.web3_utils import Web3Helper
 
@@ -20,6 +21,7 @@ WORD_LIST = [
 class RandomMessageBehavior(Behavior):
     """
     Generates random two-word messages every 2 seconds from predefined word list.
+    Non-blocking implementation.
     """
 
     def __init__(self, word_list: List[str] = WORD_LIST):
@@ -31,20 +33,34 @@ class RandomMessageBehavior(Behavior):
         """
         super().__init__(interval=2.0)  # 2 seconds interval
         self.word_list = word_list
+        self._message_generation_in_progress = False
         logger.info("RandomMessageBehavior initialized with "
                    f"{len(word_list)} words")
 
     async def execute(self) -> Optional[Message]:
         """
-        Generate random two-word message.
+        Generate random two-word message asynchronously.
 
         Returns:
             Message: Contains randomly generated two-word string
         """
+        if self._message_generation_in_progress:
+            logger.debug("Message generation already in progress, skipping")
+            return None
+
         try:
-            # Select two random words
-            word1 = random.choice(self.word_list)
-            word2 = random.choice(self.word_list)
+            self._message_generation_in_progress = True
+
+            # Create a task for word selection
+            async def select_words():
+                return random.choice(self.word_list), random.choice(self.word_list)
+
+            try:
+                word_task = asyncio.create_task(select_words())
+                word1, word2 = await asyncio.wait_for(word_task, timeout=0.1)
+            except asyncio.TimeoutError:
+                logger.warning("Word selection timed out")
+                return None
 
             # Create message content
             content = f"{word1} {word2}"
@@ -67,10 +83,14 @@ class RandomMessageBehavior(Behavior):
             logger.error(f"Error generating random message: {e}")
             return None
 
+        finally:
+            self._message_generation_in_progress = False
+
 
 class TokenBalanceBehavior(Behavior):
     """
     Checks ERC20 token balance every 10 seconds and generates balance message.
+    Non-blocking implementation.
     """
 
     def __init__(
@@ -88,6 +108,7 @@ class TokenBalanceBehavior(Behavior):
         super().__init__(interval=10.0)  # 10 seconds interval
         self.wallet_address = wallet_address
         self.web3_helper = Web3Helper(contract_address)
+        self._balance_check_in_progress = False
 
         logger.info(
             f"TokenBalanceBehavior initialized for wallet "
@@ -97,14 +118,31 @@ class TokenBalanceBehavior(Behavior):
     async def execute(self) -> Optional[Message]:
         """
         Check token balance and generate balance message.
+        Non-blocking implementation with timeout.
 
         Returns:
             Message: Contains current token balance
         """
+        if self._balance_check_in_progress:
+            logger.debug("Balance check already in progress, skipping")
+            return None
+
         try:
-            # Get human-readable balance
-            balance = await self.web3_helper.get_balance(self.wallet_address)
+            self._balance_check_in_progress = True
+
+            # Create balance check task with timeout
+            async def check_balance():
+                return await self.web3_helper.get_balance(self.wallet_address)
+
+            try:
+                balance_task = asyncio.create_task(check_balance())
+                balance = await asyncio.wait_for(balance_task, timeout=5.0)
+            except asyncio.TimeoutError:
+                logger.warning("Balance check timed out")
+                return None
+
             if balance is None:
+                logger.warning("No balance returned from web3_helper")
                 return None
 
             # Create message
@@ -129,3 +167,6 @@ class TokenBalanceBehavior(Behavior):
         except Exception as e:
             logger.error(f"Error checking token balance: {e}")
             return None
+
+        finally:
+            self._balance_check_in_progress = False
