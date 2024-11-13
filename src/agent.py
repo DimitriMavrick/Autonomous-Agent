@@ -127,50 +127,19 @@ class Behavior(ABC):
         """
         self.interval = interval
         self.last_execution = datetime.now()
-        self.task: Optional[asyncio.Task] = None
-        self._running = False
 
-    @property
-    def is_running(self) -> bool:
-        """Check if behavior task is running."""
-        return self._running and self.task is not None and not self.task.done()
+    def should_execute(self) -> bool:
+        """
+        Check if behavior should execute based on interval.
 
-    async def start(self) -> None:
-        """Start the behavior task."""
-        if not self.is_running:
-            self._running = True
-            self.task = asyncio.create_task(self._run())
-            logger.debug(f"Started behavior task: {self.__class__.__name__}")
-
-    async def stop(self) -> None:
-        """Stop the behavior task."""
-        self._running = False
-        if self.task and not self.task.done():
-            self.task.cancel()
-            try:
-                await self.task
-            except asyncio.CancelledError:
-                pass
-        logger.debug(f"Stopped behavior task: {self.__class__.__name__}")
-
-    async def _run(self) -> None:
-        """Internal run loop for the behavior."""
-        while self._running:
-            try:
-                next_execution = self.last_execution.timestamp() + self.interval
-                now = datetime.now().timestamp()
-                if now >= next_execution:
-                    message = await self.execute()
-                    if message:
-                        if hasattr(self, '_agent_outbox'):
-                            await self._agent_outbox.put(message)
-                    self.last_execution = datetime.now()
-                await asyncio.sleep(0.1)
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Error in behavior {self.__class__.__name__}: {e}")
-                await asyncio.sleep(1)
+        Returns:
+            bool: True if enough time has passed since last execution
+        """
+        now = datetime.now()
+        if (now - self.last_execution).total_seconds() >= self.interval:
+            self.last_execution = now
+            return True
+        return False
 
     @abstractmethod
     async def execute(self) -> Optional[Message]:
@@ -201,7 +170,6 @@ class Agent:
         self.behaviors: List[Behavior] = []
         self.running = False
         self._connection_status = {"connected_to": None}
-        self._behavior_tasks: List[asyncio.Task] = []
         logger.info(f"Agent '{name}' initialized")
 
     async def __aenter__(self):
@@ -234,21 +202,8 @@ class Agent:
         Args:
             behavior: Behavior instance to register
         """
-        behavior._agent_outbox = self.outbox  # Give behavior access to outbox
         self.behaviors.append(behavior)
         logger.info(f"Behavior {behavior.__class__.__name__} registered with {self.name}")
-
-    async def start_behaviors(self) -> None:
-        """Start all registered behaviors concurrently."""
-        for behavior in self.behaviors:
-            await behavior.start()
-        logger.debug(f"Started all behaviors for agent {self.name}")
-
-    async def stop_behaviors(self) -> None:
-        """Stop all registered behaviors."""
-        for behavior in self.behaviors:
-            await behavior.stop()
-        logger.debug(f"Stopped all behaviors for agent {self.name}")
 
     async def process_message(self, message: Message) -> None:
         """
@@ -264,6 +219,17 @@ class Agent:
                     logger.debug(f"Message {message} processed by {handler.__class__.__name__}")
             except Exception as e:
                 logger.error(f"Error processing message {message} with handler {handler.__class__.__name__}: {e}")
+
+    async def execute_behaviors(self) -> None:
+        """Execute all registered behaviors."""
+        for behavior in self.behaviors:
+            try:
+                if behavior.should_execute():
+                    if message := await behavior.execute():
+                        await self.outbox.put(message)
+                        logger.debug(f"Behavior {behavior.__class__.__name__} executed and produced message: {message}")
+            except Exception as e:
+                logger.error(f"Error executing behavior {behavior.__class__.__name__}: {e}")
 
     def connect_to(self, other_agent: 'Agent') -> None:
         """
@@ -298,14 +264,14 @@ class Agent:
         logger.info(f"Agent '{self.name}' started")
 
         try:
-            # Start all behaviors concurrently
-            await self.start_behaviors()
-
             while self.running:
                 # Process inbox messages
                 while not self.inbox.is_empty():
                     if message := await self.inbox.get():
                         await self.process_message(message)
+
+                # Execute behaviors
+                await self.execute_behaviors()
 
                 # Prevent CPU overload
                 await asyncio.sleep(0.1)
@@ -327,13 +293,13 @@ class Agent:
         logger.info(f"Agent '{self.name}' stopping...")
         self.running = False
 
-        # Stop all behaviors
-        await self.stop_behaviors()
-
         # Process remaining messages
         while not self.inbox.is_empty():
             if message := await self.inbox.get():
                 await self.process_message(message)
+
+        # Execute behaviors one last time
+        await self.execute_behaviors()
 
         # Clear message boxes
         await self.inbox.clear()
@@ -358,5 +324,6 @@ if __name__ == "__main__":
         async with Agent("TestAgent") as agent:
             # Register behaviors and handlers
             await agent.run()
+
 
     asyncio.run(example())
